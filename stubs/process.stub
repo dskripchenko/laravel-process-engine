@@ -1,0 +1,21 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ namespace }};
+
+use Dskripchenko\ProcessEngine\Builder\Builder;
+use Dskripchenko\ProcessEngine\Process;
+
+final class {{ class }} extends Process
+{
+    public const VERSION = 1;
+
+    public function define(Builder $p): void
+    {
+        $p->state('started', fn (Builder $s) => $s
+            ->on('finish', to: 'done'));
+
+        $p->final('done');
+    }
+}

@@ -1,0 +1,21 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ namespace }};
+
+use Dskripchenko\ProcessEngine\Attributes\Idempotent;
+use Dskripchenko\ProcessEngine\Effect\Effect;
+
+/**
+ * Safe to repeat: retried on any ambiguous failure.
+ */
+#[Idempotent]
+final class {{ class }}
+{
+    public function __invoke(array $context, Effect $fx): mixed
+    {
+        // Pass $fx->key to the other side as an idempotency key where it is supported.
+        return null;
+    }
+}

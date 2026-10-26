@@ -1,0 +1,31 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ namespace }};
+
+use Dskripchenko\ProcessEngine\Attributes\AtMostOnce;
+use Dskripchenko\ProcessEngine\Effect\Effect;
+use Dskripchenko\ProcessEngine\Effect\EffectNotExecuted;
+use Dskripchenko\ProcessEngine\Effect\Outcome;
+use Dskripchenko\ProcessEngine\Effect\Reconcilable;
+
+/**
+ * Must never run twice. An ambiguous failure makes it `unknown`: no retry,
+ * reconcile() finds out what happened, then an operator decides.
+ */
+#[AtMostOnce]
+final class {{ class }} implements Reconcilable
+{
+    public function __invoke(array $context, Effect $fx): mixed
+    {
+        // throw new EffectNotExecuted($e) when the call certainly did not reach the other side.
+        return null;
+    }
+
+    public function reconcile(array $context, Effect $fx): Outcome
+    {
+        // Look the call up by $fx->key on the other side.
+        return Outcome::stillUnknown();
+    }
+}

@@ -1,0 +1,8 @@
+parameters:
+    level: 6
+    paths:
+        - src
+    treatPhpDocTypesAsCertain: false
+    ignoreErrors:
+        # The trait is used by host models; the package itself has none.
+        - identifier: trait.unused
