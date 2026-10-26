@@ -5,6 +5,15 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2026-10-26
+
+### Fixed
+- SQLite with several workers on PHP 8.2 / 8.3 failed with "database is
+  locked": Laravel honours `transaction_mode` only on PHP 8.4+, and a
+  deferred transaction that read first cannot upgrade to a write once another
+  connection committed. The store now takes the write lock when a
+  transaction begins. `transaction_mode` is no longer needed.
+
 ## [1.0.0] - 2026-10-26
 
 ### Added
@@ -23,4 +32,5 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
   `make:process-effect`.
 - Forwarding of laravel-delayed-process completions as published events.
 
+[1.0.1]: https://github.com/dskripchenko/laravel-process-engine/releases/tag/v1.0.1
 [1.0.0]: https://github.com/dskripchenko/laravel-process-engine/releases/tag/v1.0.0

@@ -59,10 +59,12 @@ php artisan vendor:publish --tag=process-engine-stubs      # make:process templa
 使用原生类型。对于使用多个 worker 的 SQLite，请在连接上设置：
 
 ```php
-'transaction_mode' => 'IMMEDIATE',
 'journal_mode' => 'wal',
 'busy_timeout' => 10000,
 ```
+
+存储在事务开始时自行获取写锁，因此不需要 `transaction_mode`
+（Laravel 也只在 PHP 8.4+ 上应用它）。
 
 ## 替换组件
 

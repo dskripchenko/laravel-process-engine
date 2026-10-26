@@ -39,7 +39,18 @@ final class DatabaseStore implements Store
 
     public function transaction(callable $callback): mixed
     {
-        return $this->db->transaction(\Closure::fromCallable($callback));
+        return $this->db->transaction(function () use ($callback) {
+            if ($this->db->getDriverName() === 'sqlite' && $this->db->transactionLevel() === 1) {
+                // A deferred SQLite transaction that read first cannot upgrade
+                // to a write after another connection committed: it fails with
+                // "database is locked" whatever the busy timeout. Laravel
+                // honours `transaction_mode` only on PHP 8.4+, so take the
+                // write lock now, while the busy timeout still applies.
+                $this->table('instances')->whereRaw('0 = 1')->update(['seq' => $this->db->raw('seq')]);
+            }
+
+            return $callback();
+        });
     }
 
     private function table(string $name): Builder

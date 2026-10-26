@@ -63,10 +63,12 @@ JSON-Spalten verwenden den nativen Typ, wo es einen gibt. Für SQLite mit mehr
 als einem Worker setzen Sie an der Verbindung:
 
 ```php
-'transaction_mode' => 'IMMEDIATE',
 'journal_mode' => 'wal',
 'busy_timeout' => 10000,
 ```
+
+Der Store nimmt die Schreibsperre beim Beginn der Transaktion, daher ist
+`transaction_mode` nicht nötig (Laravel wendet es ohnehin erst ab PHP 8.4 an).
 
 ## Teile ersetzen
 

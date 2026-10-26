@@ -63,10 +63,12 @@ columns use the native type where there is one. For SQLite with more than
 one worker, set on the connection:
 
 ```php
-'transaction_mode' => 'IMMEDIATE',
 'journal_mode' => 'wal',
 'busy_timeout' => 10000,
 ```
+
+The store takes the write lock when a transaction begins, so `transaction_mode`
+is not needed (Laravel applies it only on PHP 8.4+ anyway).
 
 ## Replacing parts
 

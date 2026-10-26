@@ -6,6 +6,7 @@ use Dskripchenko\LaravelProcessEngine\EngineFactory;
 use Dskripchenko\LaravelProcessEngine\Tests\Fixtures\ConcurrentOrder;
 use Dskripchenko\ProcessEngine\Engine;
 use Dskripchenko\ProcessEngine\Runtime\SyncDispatcher;
+use Dskripchenko\ProcessEngine\Store\Store;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -23,7 +24,7 @@ beforeEach(function () {
         $file = sys_get_temp_dir().'/pe-concurrency-'.getmypid().'.sqlite';
         @unlink($file);
         touch($file);
-        config(['database.connections.testing' => ['driver' => 'sqlite', 'database' => $file, 'prefix' => '', 'foreign_key_constraints' => false, 'busy_timeout' => 15000, 'journal_mode' => 'wal', 'transaction_mode' => 'IMMEDIATE']]);
+        config(['database.connections.testing' => ['driver' => 'sqlite', 'database' => $file, 'prefix' => '', 'foreign_key_constraints' => false, 'busy_timeout' => 15000, 'journal_mode' => 'wal']]);
         DB::purge('testing');
         $this->artisan('migrate:fresh')->run();
     }
@@ -142,3 +143,30 @@ it('turns a worker killed mid-call into unknown and reconciles without a second 
         ->and(DB::table('charge_calls')->count())->toBe(1)
         ->and(array_map(fn ($j) => $j->type, $view->journal()))->toContain('effect.lease_expired', 'effect.unknown', 'effect.reconciled');
 })->group('concurrency');
+
+it('takes the SQLite write lock when a store transaction begins, before the first read', function () {
+    if ((getenv('PE_DB') ?: 'sqlite') !== 'sqlite') {
+        $this->markTestSkipped('SQLite only');
+    }
+    // A deferred transaction that read first cannot upgrade to a write once
+    // another connection has committed ("database is locked", whatever the
+    // busy timeout). Laravel honours `transaction_mode` only on PHP 8.4+, so
+    // the store takes the lock itself: a second writer must find it held.
+    $file = config('database.connections.testing.database');
+    $other = new PDO('sqlite:'.$file);
+    $other->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    $other->exec('PRAGMA busy_timeout = 0');
+
+    $locked = app(Store::class)->transaction(function () use ($other) {
+        try {
+            $other->exec('BEGIN IMMEDIATE');
+            $other->exec('ROLLBACK');
+
+            return false;
+        } catch (PDOException) {
+            return true;
+        }
+    });
+
+    expect($locked)->toBeTrue();
+});
