@@ -72,11 +72,6 @@ jobs:
           extensions: pdo_sqlite, pdo_pgsql, pdo_mysql, pcntl, posix
           coverage: none
 
-      - name: Use the published core
-        run: |
-          composer config --unset repositories.0 || true
-          composer require "dskripchenko/process-engine:^1.0" --no-interaction --no-update
-
       - name: Pin Laravel version
         run: |
           composer require "laravel/framework:^${{ matrix.laravel }}.0" --no-interaction --no-update

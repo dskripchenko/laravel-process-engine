@@ -5,7 +5,7 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.0.0] - 2026-10-26
 
 ### Added
 - Database store for PostgreSQL, MySQL / MariaDB and SQLite with migrations,
@@ -22,3 +22,5 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
   `doctor`, `migrate`, `archive`, `validate`, `graph`; `make:process`,
   `make:process-effect`.
 - Forwarding of laravel-delayed-process completions as published events.
+
+[1.0.0]: https://github.com/dskripchenko/laravel-process-engine/releases/tag/v1.0.0
