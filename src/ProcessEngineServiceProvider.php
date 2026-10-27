@@ -6,6 +6,7 @@ namespace Dskripchenko\LaravelProcessEngine;
 
 use Dskripchenko\LaravelProcessEngine\Store\DatabaseStore;
 use Dskripchenko\LaravelProcessEngine\Support\ConfigFlags;
+use Dskripchenko\LaravelProcessEngine\Support\EffectRoutes;
 use Dskripchenko\LaravelProcessEngine\Support\EloquentProjector;
 use Dskripchenko\LaravelProcessEngine\Support\LaravelClock;
 use Dskripchenko\LaravelProcessEngine\Support\QueueDispatcher;
@@ -36,9 +37,16 @@ final class ProcessEngineServiceProvider extends ServiceProvider
         $this->app->singleton(FlagProvider::class, ConfigFlags::class);
         $this->app->singleton(BusinessCalendar::class, WeekdayCalendar::class);
         $this->app->singleton(Projector::class, EloquentProjector::class);
-        $this->app->singleton(Dispatcher::class, fn () => new QueueDispatcher(
+        $this->app->singleton(EffectRoutes::class, fn () => new EffectRoutes(
+            (array) config('process-engine.routes', []),
             config('process-engine.queue.connection'),
             config('process-engine.queue.name'),
+        ));
+        $this->app->singleton(Dispatcher::class, fn (Application $app) => new QueueDispatcher(
+            config('process-engine.queue.connection'),
+            config('process-engine.queue.name'),
+            $app->make(EffectRoutes::class),
+            fn (): Store => $app->make(Store::class),
         ));
 
         $this->app->singleton(Engine::class, fn (Application $app): Engine => (new EngineFactory($app))->make());

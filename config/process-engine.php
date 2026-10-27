@@ -16,6 +16,12 @@ return [
         'name' => env('PROCESS_ENGINE_QUEUE', 'default'),
     ],
 
+    // Queues of effects by handler class (overrides #[OnQueue] on the class):
+    // EffectClass::class => 'queue' or ['queue' => ..., 'connection' => ...].
+    // The job timeout follows the attempt timeout of the effect's retry policy;
+    // keep the queue's retry_after above the longest one.
+    'routes' => [],
+
     // Signs task tokens handed to external parties (defaults to the app key).
     'secret' => env('PROCESS_ENGINE_SECRET'),
 
