@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace Dskripchenko\LaravelProcessEngine\Facades;
 
+use Dskripchenko\LaravelProcessEngine\ProcessManager;
 use Dskripchenko\ProcessEngine\Engine;
 use Illuminate\Support\Facades\Facade;
 
 /**
  * @method static \Dskripchenko\ProcessEngine\Query\InstanceView start(string $process, object|array<string, mixed> $context = [], ?string $key = null, ?\Dskripchenko\ProcessEngine\Actor $by = null, ?string $subjectType = null, string|int|null $subjectId = null, ?int $version = null)
+ * @method static \Dskripchenko\ProcessEngine\Query\InstanceView startExclusive(string $process, string $lock, object|array<string, mixed> $context = [], ?\Dskripchenko\ProcessEngine\Actor $by = null, ?object $subject = null)
+ * @method static \Dskripchenko\ProcessEngine\Engine engine()
  * @method static \Dskripchenko\ProcessEngine\Runtime\Receipt send(string $instanceId, object|string $event, array<string, mixed> $payload = [], ?string $key = null, ?\Dskripchenko\ProcessEngine\Actor $by = null)
  * @method static \Dskripchenko\ProcessEngine\Runtime\Receipt sendStrict(string $instanceId, object|string $event, array<string, mixed> $payload = [], ?string $key = null, ?\Dskripchenko\ProcessEngine\Actor $by = null)
  * @method static \Dskripchenko\ProcessEngine\Runtime\Receipt publish(object|string $event, string $correlate, array<string, mixed> $payload = [], ?string $key = null, ?\Dskripchenko\ProcessEngine\Actor $by = null)
@@ -32,11 +35,12 @@ use Illuminate\Support\Facades\Facade;
  * @method static array<string, int> stateCounts(string $process, ?int $version = null)
  *
  * @see Engine
+ * @see ProcessManager
  */
 final class Processes extends Facade
 {
     protected static function getFacadeAccessor(): string
     {
-        return Engine::class;
+        return ProcessManager::class;
     }
 }

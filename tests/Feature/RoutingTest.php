@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Dskripchenko\LaravelProcessEngine\Facades\Processes;
 use Dskripchenko\LaravelProcessEngine\Jobs\ExecuteEffect;
 use Dskripchenko\LaravelProcessEngine\Support\EffectRoutes;
+use Dskripchenko\LaravelProcessEngine\Tests\Fixtures\ClaimFlow;
 use Dskripchenko\LaravelProcessEngine\Tests\Fixtures\LoadRegion;
 use Dskripchenko\LaravelProcessEngine\Tests\Fixtures\PlainCall;
 use Dskripchenko\LaravelProcessEngine\Tests\Fixtures\RoutedFlow;
@@ -45,4 +46,18 @@ it('lets the routes of the config override the attribute', function () {
     expect($jobs[LoadRegion::class]->queue)->toBe('gar')
         ->and($jobs[LoadRegion::class]->connection)->toBe('redis')
         ->and($jobs[PlainCall::class]->queue)->toBe('fast');
+});
+
+it('starts exclusively: one unfinished instance per lock, a new one once it finished', function () {
+    $first = Processes::startExclusive(ClaimFlow::class, 'claims:nightly');
+    $again = Processes::startExclusive(ClaimFlow::class, 'claims:nightly');
+    $other = Processes::startExclusive(ClaimFlow::class, 'claims:other');
+    expect($again->id())->toBe($first->id())->and($other->id())->not->toBe($first->id());
+
+    Processes::send($first->id(), 'submit');
+    Processes::send($first->id(), 'approve');
+    expect(Processes::get($first->id())->isFinished())->toBeTrue();
+
+    $next = Processes::startExclusive(ClaimFlow::class, 'claims:nightly');
+    expect($next->id())->not->toBe($first->id())->and($next->isFinished())->toBeFalse();
 });

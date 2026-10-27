@@ -50,6 +50,11 @@ final class ProcessEngineServiceProvider extends ServiceProvider
         ));
 
         $this->app->singleton(Engine::class, fn (Application $app): Engine => (new EngineFactory($app))->make());
+        $this->app->singleton(ProcessManager::class, fn (Application $app): ProcessManager => new ProcessManager(
+            $app->make(Engine::class),
+            $app['db']->connection(config('process-engine.connection')),
+            (string) config('process-engine.table_prefix', 'pe_'),
+        ));
     }
 
     public function boot(): void
