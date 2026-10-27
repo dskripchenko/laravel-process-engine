@@ -7,6 +7,9 @@ namespace Dskripchenko\LaravelProcessEngine\Store;
 use DateTimeImmutable;
 use DateTimeInterface;
 use DateTimeZone;
+use Dskripchenko\ProcessEngine\Store\BatchItemRecord;
+use Dskripchenko\ProcessEngine\Store\BatchRecord;
+use Dskripchenko\ProcessEngine\Store\BatchStore;
 use Dskripchenko\ProcessEngine\Store\DefinitionRecord;
 use Dskripchenko\ProcessEngine\Store\EffectRecord;
 use Dskripchenko\ProcessEngine\Store\InboxRecord;
@@ -28,7 +31,7 @@ use Illuminate\Database\Query\Builder;
  * idempotent inserts are insertOrIgnore on unique keys: no database-specific
  * locking is needed for correctness.
  */
-final class DatabaseStore implements Store
+final class DatabaseStore implements BatchStore, Store
 {
     private const FORMAT = 'Y-m-d H:i:s.u';
 
@@ -810,6 +813,217 @@ final class DatabaseStore implements Store
             resolution: $r->resolution !== null ? (string) $r->resolution : null,
             resolvedBy: $r->resolved_by !== null ? self::json($r->resolved_by) : null,
             resolvedAt: self::readNullable($r->resolved_at),
+        );
+    }
+
+    // Batches -----------------------------------------------------------------
+
+    public function insertBatch(BatchRecord $record): void
+    {
+        $this->table('batches')->insert($this->batchRow($record) + [
+            'id' => $record->id,
+            'instance_id' => $record->instanceId,
+            'key' => $record->key,
+            'invoke' => $record->invoke,
+            'state' => $record->state,
+            'activation' => $record->activation,
+            'handler' => $record->handler,
+            'source' => $record->source,
+            'chunk' => $record->chunk,
+            'concurrency' => $record->concurrency,
+            'item_attempts' => $record->itemAttempts,
+            'retry' => Json::encode($record->retry),
+            'context' => Json::encode($record->context),
+            'context_class' => $record->contextClass,
+            'seq' => $record->seq,
+            'created_at' => self::date($record->createdAt ?? new DateTimeImmutable),
+        ]);
+    }
+
+    public function findBatch(string $id): ?BatchRecord
+    {
+        $row = $this->table('batches')->where('id', $id)->first();
+
+        return $row !== null ? $this->batch($row) : null;
+    }
+
+    public function updateBatch(BatchRecord $record, int $expectedSeq): bool
+    {
+        $updated = $this->table('batches')->where('id', $record->id)->where('seq', $expectedSeq)
+            ->update($this->batchRow($record) + ['seq' => $expectedSeq + 1]);
+        if ($updated === 0) {
+            return false;
+        }
+        $record->seq = $expectedSeq + 1;
+
+        return true;
+    }
+
+    public function batches(string $instanceId, ?string $status = null): array
+    {
+        $query = $this->table('batches')->where('instance_id', $instanceId)->orderBy('created_at')->orderBy('id');
+        if ($status !== null) {
+            $query->where('status', $status);
+        }
+
+        return array_values($query->get()->map(fn ($row) => $this->batch($row))->all());
+    }
+
+    public function insertBatchItems(string $batchId, array $keys, int $firstPosition, DateTimeImmutable $now): int
+    {
+        $keys = array_values(array_unique(array_map('strval', $keys)));
+        if ($keys === []) {
+            return 0;
+        }
+        // Positions follow the order of the new keys only: known ones are left out first.
+        $known = array_flip(array_map('strval', $this->table('batch_items')->where('batch_id', $batchId)->whereIn('key', $keys)->pluck('key')->all()));
+        $rows = [];
+        $position = $firstPosition;
+        foreach ($keys as $key) {
+            if (isset($known[$key])) {
+                continue;
+            }
+            $rows[] = ['batch_id' => $batchId, 'key' => $key, 'position' => $position++, 'status' => BatchItemRecord::PENDING, 'attempts' => 0, 'updated_at' => self::date($now)];
+        }
+        foreach (array_chunk($rows, 500) as $chunk) {
+            $this->table('batch_items')->insertOrIgnore($chunk);
+        }
+
+        return count($rows);
+    }
+
+    public function batchItems(string $batchId, ?string $status = null, int $limit = 100, ?int $afterPosition = null): array
+    {
+        $query = $this->table('batch_items')->where('batch_id', $batchId)->orderBy('position')->limit($limit);
+        if ($status !== null) {
+            $query->where('status', $status);
+        }
+        if ($afterPosition !== null) {
+            $query->where('position', '>', $afterPosition);
+        }
+
+        return array_values($query->get()->map(fn ($row) => $this->batchItem($row))->all());
+    }
+
+    public function findBatchItems(string $batchId, array $keys): array
+    {
+        $out = [];
+        foreach (array_chunk(array_values(array_map('strval', $keys)), 500) as $chunk) {
+            foreach ($this->table('batch_items')->where('batch_id', $batchId)->whereIn('key', $chunk)->get() as $row) {
+                $item = $this->batchItem($row);
+                $out[$item->key] = $item;
+            }
+        }
+
+        return $out;
+    }
+
+    public function updateBatchItems(array $items): void
+    {
+        foreach ($items as $item) {
+            $this->table('batch_items')->where('batch_id', $item->batchId)->where('key', $item->key)->update([
+                'status' => $item->status,
+                'attempts' => $item->attempts,
+                'reason' => $item->reason !== null ? mb_substr($item->reason, 0, 1000) : null,
+                'effect_id' => $item->effectId,
+                'updated_at' => self::date($item->updatedAt ?? new DateTimeImmutable),
+            ]);
+        }
+    }
+
+    public function moveBatchItems(string $batchId, array $from, string $to, ?string $reason, DateTimeImmutable $now, bool $resetAttempts = false): int
+    {
+        $set = ['status' => $to, 'effect_id' => null, 'updated_at' => self::date($now)];
+        if ($reason !== null) {
+            $set['reason'] = mb_substr($reason, 0, 1000);
+        }
+        if ($resetAttempts) {
+            $set['attempts'] = 0;
+        }
+
+        return $this->table('batch_items')->where('batch_id', $batchId)->whereIn('status', $from)->update($set);
+    }
+
+    public function countBatchItems(string $batchId): array
+    {
+        return array_map('intval', $this->table('batch_items')->where('batch_id', $batchId)
+            ->groupBy('status')->pluck($this->db->raw('count(*)'), 'status')->all());
+    }
+
+    public function deleteBatches(string $instanceId): void
+    {
+        $ids = $this->table('batches')->where('instance_id', $instanceId)->pluck('id')->all();
+        foreach ($ids as $id) {
+            do {
+                // In slices: a batch can hold a million elements.
+                $deleted = $this->table('batch_items')->where('batch_id', $id)->limit(10000)->delete();
+            } while ($deleted > 0);
+        }
+        $this->table('batches')->where('instance_id', $instanceId)->delete();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function batchRow(BatchRecord $record): array
+    {
+        return [
+            'status' => $record->status,
+            'cursor' => $record->cursor,
+            'exhausted' => $record->exhausted,
+            'running' => $record->running,
+            'chunks' => $record->chunks,
+            'seen' => $record->seen,
+            'total' => $record->total,
+            'counters' => Json::encode((object) $record->counters),
+            'error' => $record->error !== null ? Json::encode($record->error) : null,
+            'finished_at' => self::date($record->finishedAt),
+        ];
+    }
+
+    private function batch(object $row): BatchRecord
+    {
+        return new BatchRecord(
+            id: (string) $row->id,
+            instanceId: (string) $row->instance_id,
+            key: (string) $row->key,
+            invoke: (string) $row->invoke,
+            state: (string) $row->state,
+            activation: (string) $row->activation,
+            handler: (string) $row->handler,
+            source: (string) $row->source,
+            chunk: (int) $row->chunk,
+            concurrency: (int) $row->concurrency,
+            itemAttempts: (int) $row->item_attempts,
+            retry: self::json($row->retry),
+            context: self::json($row->context),
+            contextClass: $row->context_class !== null ? (string) $row->context_class : null,
+            status: (string) $row->status,
+            cursor: $row->cursor !== null ? (string) $row->cursor : null,
+            exhausted: (bool) $row->exhausted,
+            running: (int) $row->running,
+            chunks: (int) $row->chunks,
+            seen: (int) $row->seen,
+            total: $row->total !== null ? (int) $row->total : null,
+            counters: array_map('intval', self::json($row->counters)),
+            error: $row->error !== null ? self::json($row->error) : null,
+            seq: (int) $row->seq,
+            createdAt: self::read((string) $row->created_at),
+            finishedAt: self::readNullable($row->finished_at),
+        );
+    }
+
+    private function batchItem(object $row): BatchItemRecord
+    {
+        return new BatchItemRecord(
+            batchId: (string) $row->batch_id,
+            key: (string) $row->key,
+            position: (int) $row->position,
+            status: (string) $row->status,
+            attempts: (int) $row->attempts,
+            reason: $row->reason !== null ? (string) $row->reason : null,
+            effectId: $row->effect_id !== null ? (string) $row->effect_id : null,
+            updatedAt: self::readNullable($row->updated_at),
         );
     }
 

@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace Dskripchenko\LaravelProcessEngine;
 
 use Dskripchenko\LaravelProcessEngine\Store\DatabaseStore;
-use Dskripchenko\LaravelProcessEngine\Support\ConfigFlags;
 use Dskripchenko\LaravelProcessEngine\Support\EffectRoutes;
 use Dskripchenko\LaravelProcessEngine\Support\EloquentProjector;
 use Dskripchenko\LaravelProcessEngine\Support\LaravelClock;
 use Dskripchenko\LaravelProcessEngine\Support\QueueDispatcher;
+use Dskripchenko\LaravelProcessEngine\Support\Switches;
 use Dskripchenko\ProcessEngine\Engine;
 use Dskripchenko\ProcessEngine\Interpreter\BusinessCalendar;
 use Dskripchenko\ProcessEngine\Interpreter\FlagProvider;
@@ -34,7 +34,13 @@ final class ProcessEngineServiceProvider extends ServiceProvider
             (string) config('process-engine.table_prefix', 'pe_'),
         ));
         $this->app->singleton(Clock::class, LaravelClock::class);
-        $this->app->singleton(FlagProvider::class, ConfigFlags::class);
+        // Flags from the config, switches of switchable states from the database (ADR-015).
+        $this->app->bind(Switches::class, fn (Application $app) => new Switches(
+            $app['config'],
+            $app['db']->connection(config('process-engine.connection')),
+            (string) config('process-engine.table_prefix', 'pe_'),
+        ));
+        $this->app->bind(FlagProvider::class, Switches::class);
         $this->app->singleton(BusinessCalendar::class, WeekdayCalendar::class);
         $this->app->singleton(Projector::class, EloquentProjector::class);
         $this->app->singleton(EffectRoutes::class, fn () => new EffectRoutes(

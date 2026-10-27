@@ -47,6 +47,10 @@ return [
     // Feature switches read by flag('name') guards: name => bool.
     'flags' => [],
 
+    // First state of a new switch of switchable states (ADR-015): name => bool.
+    // A switch not listed starts on; once changed, the database owns it.
+    'switches' => [],
+
     // Allow changing a stored version that no instance uses yet (local development).
     'allow_redefine_unused' => env('PROCESS_ENGINE_ALLOW_REDEFINE', false),
 
