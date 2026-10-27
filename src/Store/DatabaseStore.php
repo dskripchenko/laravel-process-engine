@@ -920,14 +920,24 @@ final class DatabaseStore implements BatchStore, Store
 
     public function updateBatchItems(array $items): void
     {
+        // Elements of a chunk mostly end alike: one statement per distinct set of values.
+        $groups = [];
         foreach ($items as $item) {
-            $this->table('batch_items')->where('batch_id', $item->batchId)->where('key', $item->key)->update([
+            $values = [
                 'status' => $item->status,
                 'attempts' => $item->attempts,
                 'reason' => $item->reason !== null ? mb_substr($item->reason, 0, 1000) : null,
                 'effect_id' => $item->effectId,
                 'updated_at' => self::date($item->updatedAt ?? new DateTimeImmutable),
-            ]);
+            ];
+            $group = $item->batchId."\0".serialize($values);
+            $groups[$group] ??= ['batch' => $item->batchId, 'values' => $values, 'keys' => []];
+            $groups[$group]['keys'][] = $item->key;
+        }
+        foreach ($groups as $group) {
+            foreach (array_chunk($group['keys'], 1000) as $keys) {
+                $this->table('batch_items')->where('batch_id', $group['batch'])->whereIn('key', $keys)->update($group['values']);
+            }
         }
     }
 

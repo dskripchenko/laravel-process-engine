@@ -145,3 +145,26 @@ final class Pipeline extends Process
         $p->final('done');
     }
 }
+
+/** A handler that only answers: what is left is the engine's own cost. */
+#[Idempotent]
+final class Nothing implements BatchHandler
+{
+    /** @param list<string> $keys */
+    public function handle(array $keys): BatchResult
+    {
+        return BatchResult::allDone($keys);
+    }
+}
+
+final class Large extends Process
+{
+    public const VERSION = 1;
+
+    public function define(Builder $p): void
+    {
+        $p->state('work', fn (Builder $s) => $s
+            ->batch(Nothing::class, items: Numbers::class, chunk: 500, concurrency: 8, onDone: 'done'));
+        $p->final('done');
+    }
+}
