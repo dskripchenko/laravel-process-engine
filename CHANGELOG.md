@@ -5,6 +5,23 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-10-27
+
+### Added
+- Batches and their elements on the database (`pe_batches`, `pe_batch_items`),
+  removed with the archived instance. Requires `dskripchenko/process-engine` ^1.2.
+- A queue per effect: `#[OnQueue]` on the handler class or
+  `process-engine.routes`; the job timeout follows the attempt timeout of the
+  effect's retry policy.
+- `Processes::startExclusive()`: one unfinished instance per lock, for schedules
+  that must not overlap (`pe_exclusive`).
+- Switches of switchable states in `pe_switches`: `FlagProvider` is bound to
+  `Switches` (flags from the config as before, switches from the table; the
+  first state of a new switch from `process-engine.switches`).
+- The `Processes` facade resolves `ProcessManager`, which forwards every call to
+  the engine (`Processes::engine()` returns it).
+- `tests/Feature/LoadTest.php`: a batch at scale (`PE_LOAD=<elements>`).
+
 ## [1.0.1] - 2026-10-26
 
 ### Fixed

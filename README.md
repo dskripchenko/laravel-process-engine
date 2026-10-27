@@ -60,6 +60,7 @@ Claim::whereProcessIn('awaitingDocuments')->paginate();
 |---|---|---|---|---|
 | Installation and configuration | [en](docs/en/installation.md) | [de](docs/de/installation.md) | [ru](docs/ru/installation.md) | [zh](docs/zh/installation.md) |
 | Using it in an application | [en](docs/en/usage.md) | [de](docs/de/usage.md) | [ru](docs/ru/usage.md) | [zh](docs/zh/usage.md) |
+| Data pipelines: queues per effect, exclusive starts, switches | [en](docs/en/pipelines.md) | [de](docs/de/pipelines.md) | [ru](docs/ru/pipelines.md) | [zh](docs/zh/pipelines.md) |
 
 Processes themselves — the builder, effects, events, versions, operations —
 are documented in [dskripchenko/process-engine](https://github.com/dskripchenko/process-engine#documentation).

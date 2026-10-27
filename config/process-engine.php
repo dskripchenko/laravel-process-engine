@@ -16,6 +16,12 @@ return [
         'name' => env('PROCESS_ENGINE_QUEUE', 'default'),
     ],
 
+    // Queues of effects by handler class (overrides #[OnQueue] on the class):
+    // EffectClass::class => 'queue' or ['queue' => ..., 'connection' => ...].
+    // The job timeout follows the attempt timeout of the effect's retry policy;
+    // keep the queue's retry_after above the longest one.
+    'routes' => [],
+
     // Signs task tokens handed to external parties (defaults to the app key).
     'secret' => env('PROCESS_ENGINE_SECRET'),
 
@@ -40,6 +46,10 @@ return [
 
     // Feature switches read by flag('name') guards: name => bool.
     'flags' => [],
+
+    // First state of a new switch of switchable states (ADR-015): name => bool.
+    // A switch not listed starts on; once changed, the database owns it.
+    'switches' => [],
 
     // Allow changing a stored version that no instance uses yet (local development).
     'allow_redefine_unused' => env('PROCESS_ENGINE_ALLOW_REDEFINE', false),

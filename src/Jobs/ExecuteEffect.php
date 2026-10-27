@@ -22,6 +22,9 @@ final class ExecuteEffect implements ShouldQueue
 
     public int $tries = 1;
 
+    /** Seconds the queue lets one attempt run: set from the effect's retry policy (EffectRoutes). */
+    public ?int $timeout = null;
+
     public function __construct(public readonly string $effectId) {}
 
     public function handle(Engine $engine): void
