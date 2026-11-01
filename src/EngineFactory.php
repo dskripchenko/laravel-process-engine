@@ -43,6 +43,8 @@ final class EngineFactory
                 overdueAfter: (string) ($o['overdue_after'] ?? '5 minutes'),
                 pollBackoffMax: (string) ($o['poll_backoff_max'] ?? '1 hour'),
                 secret: (string) (config('process-engine.secret') ?: config('app.key') ?: 'process-engine'),
+                staleAfter: (string) ($o['stale_after'] ?? '5 minutes'),
+                unknownAfter: (string) ($o['unknown_after'] ?? '15 minutes'),
             ),
             listener: new SignalForwarder($this->app['events']),
             flags: $this->app->make(FlagProvider::class),

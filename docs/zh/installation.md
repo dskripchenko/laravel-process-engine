@@ -46,6 +46,8 @@ php artisan vendor:publish --tag=process-engine-stubs      # make:process templa
 | `options.sweep_after` | `30 seconds` | 早于此时长的待处理事件会被 tick 重新分派 |
 | `options.archive_after` | `30 days` | 结束超过此时长的实例会被归档 |
 | `options.overdue_after` | `5 minutes` | 定时器延迟超过此时长，在 `status` 中计为逾期 |
+| `options.stale_after` | `5 minutes` | 等待超过此时长的事件或到期副作用，在 `status` 中计为停滞（工作进程停止） |
+| `options.unknown_after` | `15 minutes` | 结果未知超过此时长的副作用，在 `status` 中计数 |
 | `options.poll_backoff_max` | `1 hour` | 失败的轮询在重试耗尽后的间隔 |
 | `flags` | `[]` | 供 `flag('name')` 守卫使用的 `name => bool` |
 | `allow_redefine_unused` | false | 允许修改尚无实例使用的已存储版本（本地开发） |
@@ -85,5 +87,5 @@ php artisan vendor:publish --tag=process-engine-stubs      # make:process templa
 - 删除副作用类或流程方法之前运行 `php artisan process-engine:doctor`：存活的版本可能
   仍在使用它们。
 - 在健康检查中运行 `php artisan process-engine:status --fail-on-problems`（未关闭的
-  事故、逾期的定时器、卡住的副作用）。
+  事故、逾期的定时器、卡住的副作用、无人处理的事件和副作用）。
 - 监听 `ProcessSignal` 的 `incident.opened` 并通知相关人员。

@@ -49,6 +49,8 @@ surrounding transaction commits.
 | `options.sweep_after` | `30 seconds` | pending events older than this are re-dispatched by the tick |
 | `options.archive_after` | `30 days` | finished instances older than this are archived |
 | `options.overdue_after` | `5 minutes` | a timer late by more counts as overdue in `status` |
+| `options.stale_after` | `5 minutes` | an event or a due effect waiting longer counts as stale in `status` (the workers stand) |
+| `options.unknown_after` | `15 minutes` | an effect of unknown outcome for longer is counted in `status` |
 | `options.poll_backoff_max` | `1 hour` | interval of a failing poll after its retries |
 | `flags` | `[]` | `name => bool` for `flag('name')` guards |
 | `allow_redefine_unused` | false | allow changing a stored version no instance uses (local development) |
@@ -89,5 +91,6 @@ Bind your own implementations in a service provider:
 - `php artisan process-engine:doctor` before removing effect classes or
   process methods: live versions may still use them.
 - `php artisan process-engine:status --fail-on-problems` in your health
-  checks (open incidents, overdue timers, stuck effects).
+  checks (open incidents, overdue timers, stuck effects, events and effects
+  nobody takes up).
 - Listen to `ProcessSignal` for `incident.opened` and alert someone.

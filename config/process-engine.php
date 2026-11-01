@@ -42,6 +42,10 @@ return [
         'archive_after' => '30 days',
         'overdue_after' => '5 minutes',
         'poll_backoff_max' => '1 hour',
+        // Health: events and due effects waiting longer than this mean the workers stand;
+        // effects of unknown outcome for longer than unknown_after are reported.
+        'stale_after' => '5 minutes',
+        'unknown_after' => '15 minutes',
     ],
 
     // Feature switches read by flag('name') guards: name => bool.

@@ -9,7 +9,7 @@ use Illuminate\Console\Command;
 
 final class StatusCommand extends Command
 {
-    protected $signature = 'process-engine:status {--json : Machine-readable output} {--fail-on-problems : Exit 1 on incidents, overdue timers or stuck effects}';
+    protected $signature = 'process-engine:status {--json : Machine-readable output} {--fail-on-problems : Exit 1 on incidents, overdue timers, stuck effects or work the workers left standing}';
 
     protected $description = 'Instances by status, open incidents, overdue timers, stuck effects';
 
@@ -24,7 +24,9 @@ final class StatusCommand extends Command
                 $this->warn("[{$incident->type}] {$incident->instanceId}: {$incident->message}");
             }
         }
-        $problems = $health['open_incidents'] + $health['overdue_timers'] + $health['expired_effect_leases'];
+        // Events and due effects nobody takes up mean the workers stand.
+        $problems = $health['open_incidents'] + $health['overdue_timers'] + $health['expired_effect_leases']
+            + ($health['stale_inbox'] ?? 0) + ($health['stale_outbox'] ?? 0);
 
         return $this->option('fail-on-problems') && $problems > 0 ? self::FAILURE : self::SUCCESS;
     }
