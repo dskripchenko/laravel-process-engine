@@ -5,6 +5,20 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-11-01
+
+### Added
+- The database store counts what `Engine::health()` of process-engine 1.3
+  reports through `HealthCounters`: `unknown_effects`, `stale_inbox`,
+  `stale_outbox` (on the existing indexes, no migration). Thresholds in
+  `options.stale_after` (5 minutes) and `options.unknown_after` (15 minutes).
+- `process-engine:status --fail-on-problems` also fails on events and due
+  effects nobody takes up — the workers stand.
+
+### Changed
+- Requires dskripchenko/process-engine ^1.3 (quorum joins, undoing late
+  results, preserved timer deadlines on migration).
+
 ## [1.1.0] - 2026-10-27
 
 ### Added

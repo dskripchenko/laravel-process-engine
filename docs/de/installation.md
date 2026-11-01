@@ -49,6 +49,8 @@ dispatcht, nachdem die umgebende Transaktion committet wurde.
 | `options.sweep_after` | `30 seconds` | ausstehende Ereignisse, die älter sind, werden vom Tick erneut dispatcht |
 | `options.archive_after` | `30 days` | abgeschlossene Instanzen, die älter sind, werden archiviert |
 | `options.overdue_after` | `5 minutes` | ein Timer, der um mehr als das verspätet ist, gilt in `status` als überfällig |
+| `options.stale_after` | `5 minutes` | ein Ereignis oder fälliger Effekt, der länger wartet, gilt in `status` als hängend (die Worker stehen) |
+| `options.unknown_after` | `15 minutes` | ein Effekt mit länger unbekanntem Ausgang wird in `status` gezählt |
 | `options.poll_backoff_max` | `1 hour` | Intervall eines fehlschlagenden Polls nach seinen Wiederholungen |
 | `flags` | `[]` | `name => bool` für `flag('name')`-Guards |
 | `allow_redefine_unused` | false | erlaubt das Ändern einer gespeicherten Version, die keine Instanz verwendet (lokale Entwicklung) |
@@ -89,5 +91,6 @@ Binden Sie Ihre eigenen Implementierungen in einem Service Provider:
 - `php artisan process-engine:doctor`, bevor Effektklassen oder
   Prozessmethoden entfernt werden: Lebende Versionen könnten sie noch verwenden.
 - `php artisan process-engine:status --fail-on-problems` in Ihren
-  Health-Checks (offene Incidents, überfällige Timer, hängende Effekte).
+  Health-Checks (offene Incidents, überfällige Timer, hängende Effekte,
+  Ereignisse und Effekte, die niemand aufnimmt).
 - Auf `ProcessSignal` für `incident.opened` hören und jemanden alarmieren.

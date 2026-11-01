@@ -106,3 +106,22 @@ it('handles unknown outcomes, compensation, children and archive on the database
     expect($t->engine->archive())->toBeGreaterThanOrEqual(1);
     expect($t->engine->get($t->id())->isArchived())->toBeTrue();
 });
+
+it('counts effects of unknown outcome and work left standing, on the database', function () {
+    $t = dbTest()
+        ->fake(Runtime\Charge::class, throws: new RuntimeException('timeout'), reconcile: Outcome::stillUnknown())
+        ->begin(Runtime\Order::class)
+        ->send('submit', ['externalId' => 'E', 'files' => []]);
+    $health = $t->engine->health();
+    expect($health)->toHaveKeys(['unknown_effects', 'stale_inbox', 'stale_outbox'])
+        ->and($health['unknown_effects'])->toBe(0)->and($health['stale_inbox'])->toBe(0);
+
+    $t->clock->advance('20 minutes');
+    expect($t->engine->health()['unknown_effects'])->toBe(1);
+
+    // An event left unprocessed, and an effect nobody took up.
+    $t->engine->send($t->id(), 'cancel');
+    $t->clock->advance('10 minutes');
+    $health = $t->engine->health();
+    expect($health['stale_inbox'])->toBe(1);
+});

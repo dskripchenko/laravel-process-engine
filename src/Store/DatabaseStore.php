@@ -12,6 +12,7 @@ use Dskripchenko\ProcessEngine\Store\BatchRecord;
 use Dskripchenko\ProcessEngine\Store\BatchStore;
 use Dskripchenko\ProcessEngine\Store\DefinitionRecord;
 use Dskripchenko\ProcessEngine\Store\EffectRecord;
+use Dskripchenko\ProcessEngine\Store\HealthCounters;
 use Dskripchenko\ProcessEngine\Store\InboxRecord;
 use Dskripchenko\ProcessEngine\Store\IncidentRecord;
 use Dskripchenko\ProcessEngine\Store\InstanceQuery;
@@ -31,7 +32,7 @@ use Illuminate\Database\Query\Builder;
  * idempotent inserts are insertOrIgnore on unique keys: no database-specific
  * locking is needed for correctness.
  */
-final class DatabaseStore implements BatchStore, Store
+final class DatabaseStore implements BatchStore, HealthCounters, Store
 {
     private const FORMAT = 'Y-m-d H:i:s.u';
 
@@ -383,6 +384,31 @@ final class DatabaseStore implements BatchStore, Store
             ->limit($limit)
             ->pluck('id')
             ->all()));
+    }
+
+    public function countUnknownEffects(DateTimeImmutable $before): int
+    {
+        return $this->table('effects')
+            ->whereIn('status', [EffectRecord::UNKNOWN, EffectRecord::RECONCILING])
+            ->where('created_at', '<', self::date($before))
+            ->count();
+    }
+
+    public function countStaleInbox(DateTimeImmutable $before): int
+    {
+        return $this->table('inbox')
+            ->where('status', InboxRecord::PENDING)
+            ->where('received_at', '<', self::date($before))
+            ->count();
+    }
+
+    public function countStaleOutbox(DateTimeImmutable $before): int
+    {
+        return $this->table('effects')
+            ->where('status', EffectRecord::PENDING)
+            ->whereNotNull('next_attempt_at')
+            ->where('next_attempt_at', '<', self::date($before))
+            ->count();
     }
 
     public function expiredEffects(DateTimeImmutable $now, int $limit): array
